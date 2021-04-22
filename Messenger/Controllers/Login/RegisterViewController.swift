@@ -6,12 +6,13 @@
 //
 
 import UIKit
+import FirebaseAuth
 
 class RegisterViewController: UIViewController {
     
     private let imageView: UIImageView = {
         let imageView = UIImageView()
-        imageView.image = UIImage(systemName: "person")
+        imageView.image = UIImage(systemName: "person.circle")
         imageView.tintColor = .gray
         imageView.contentMode = .scaleAspectFit
         imageView.layer.masksToBounds = true
@@ -134,9 +135,9 @@ class RegisterViewController: UIViewController {
         
         let size = scrollView.frame.size.width / 3
         imageView.frame = CGRect(x: (scrollView.frame.size.width - size) / 2,
-                            y: 20,
-                            width: size,
-                            height: size)
+                                 y: 20,
+                                 width: size,
+                                 height: size)
         
         imageView.layer.cornerRadius = imageView.frame.width / 2
         
@@ -188,15 +189,37 @@ class RegisterViewController: UIViewController {
         
         // TODO: firebase login
         
+        DatabaseManager.shared.userExists(with: email, completion: { [weak self] exists in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            guard !exists else {
+                strongSelf.alertUserLoginError(message: "Email already exists")
+                return
+            }
+            
+            FirebaseAuth.Auth.auth().createUser(withEmail: email, password: password, completion: { authResult, error in
+                guard authResult != nil, error == nil else {
+                    print("Error creating user")
+                    return
+                }
+                
+                DatabaseManager.shared.insertUser(with: ChatAppUser(firstname: firstname, lastname: lastname, email: email))
+                
+                strongSelf.navigationController?.dismiss(animated: true, completion: nil)
+            })
+        })
+        
     }
     
     @objc private func didTapChangeProfilePictureButton() {
         presentPhotoActionSheet()
     }
     
-    func alertUserLoginError() {
+    func alertUserLoginError(message: String = "Please complete all fields") {
         let alert = UIAlertController(title: "Woops",
-                                      message: "Please complete all fields",
+                                      message: message,
                                       preferredStyle: .alert)
         
         alert.addAction(UIAlertAction(title: "Dismiss",
